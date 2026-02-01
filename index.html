@@ -14,14 +14,14 @@
             user-select: none;
         }
 
-        /* --- 3D 画布 (背景层) --- */
+        /* --- 3D 画布 --- */
         #canvas-container {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1; /* 保证在最底层 */
+            z-index: 1;
         }
 
         /* --- 按钮层 --- */
@@ -39,7 +39,7 @@
         }
 
         #start-btn {
-            pointer-events: auto; /* 允许点击 */
+            pointer-events: auto;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(5px);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -59,41 +59,94 @@
             box-shadow: 0 0 40px rgba(255, 105, 180, 0.8);
         }
 
-        /* --- 关键修复：卡片样式 --- */
+        /* --- 卡片样式 --- */
         #message-card {
-            position: fixed; /* 强制固定在屏幕中间 */
+            position: fixed;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%) scale(0.8); /* 初始稍微缩小 */
+            transform: translate(-50%, -50%) scale(0.9);
+            z-index: 999; /* 最高层级 */
 
-            z-index: 999; /* 🌟 关键：层级最高，防止被遮挡 🌟 */
-
-            background: rgba(20, 20, 20, 0.75);
-            backdrop-filter: blur(15px);
+            background: rgba(20, 20, 20, 0.85); /* 稍微深一点，增加对比度 */
+            backdrop-filter: blur(20px);
             padding: 40px;
             border-radius: 20px;
             text-align: center;
-            border: 1px solid rgba(255, 105, 180, 0.5);
-            box-shadow: 0 0 60px rgba(255, 105, 180, 0.3);
+            border: 1px solid rgba(255, 105, 180, 0.4);
+            box-shadow: 0 0 80px rgba(0,0,0,0.8);
             color: white;
-            min-width: 300px;
+            min-width: 320px;
+            max-width: 90%;
 
-            /* 初始状态：完全透明且不可点击 */
+            /* 动画过渡 */
             opacity: 0;
             pointer-events: none;
-            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        /* 显示状态 */
         .show-card {
             opacity: 1 !important;
             transform: translate(-50%, -50%) scale(1) !important;
             pointer-events: auto !important;
         }
 
+        /* 关闭按钮 (右上角 X) */
+        .close-icon {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.5rem;
+            color: #aaa;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .close-icon:hover { color: #fff; }
+
+        /* 底部收起按钮 */
+        .hide-btn {
+            margin-top: 25px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ddd;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .hide-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #fff;
+            color: #fff;
+        }
+
+        /* 召回按钮 (左下角小信封) */
+        #recall-btn {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 990;
+            font-size: 2rem;
+            cursor: pointer;
+            opacity: 0; /* 初始隐藏 */
+            pointer-events: none;
+            transition: all 0.5s;
+            filter: drop-shadow(0 0 10px rgba(255,105,180,0.5));
+            animation: floatBtn 3s ease-in-out infinite;
+        }
+        /* 召回按钮显示状态 */
+        .show-recall {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        @keyframes floatBtn {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
         h1 { margin: 0 0 15px 0; font-size: 2rem; color: #ff69b4; text-shadow: 0 0 10px #ff69b4; }
         p { font-size: 1.2rem; line-height: 1.8; color: #eee; margin-bottom: 10px;}
-        .small-text { font-size: 0.95rem; color: #bbb; margin-top: 25px; font-style: italic;}
+        .small-text { font-size: 0.95rem; color: #bbb; margin-top: 20px; font-style: italic;}
 
         /* --- 气球 --- */
         .balloon {
@@ -101,7 +154,7 @@
             bottom: -100px;
             font-size: 3rem;
             animation: floatUp 5s ease-in forwards;
-            z-index: 100; /* 比背景高，但比卡片低 */
+            z-index: 100;
             opacity: 0.9;
         }
         @keyframes floatUp {
@@ -118,8 +171,11 @@
         <button id="start-btn" onclick="startCeremony()">点击正式下班</button>
     </div>
 
-    <!-- 卡片层 (独立出来，避免被Flex布局影响) -->
+    <!-- 卡片层 -->
     <div id="message-card">
+        <!-- 右上角关闭 -->
+        <div class="close-icon" onclick="toggleCard(false)">×</div>
+
         <h1>🎉 宝贝辛苦啦！</h1>
         <p>
             恭喜解锁职场新地图！<br>
@@ -127,9 +183,15 @@
             无论多忙，我都在你身后。
         </p>
         <p class="small-text">
-            晚上想吃什么，老公买单！❤️
+            想吃什么，老公来买单！❤️
         </p>
+
+        <!-- 底部收起按钮 -->
+        <button class="hide-btn" onclick="toggleCard(false)">收起卡片，欣赏爱心</button>
     </div>
+
+    <!-- 召回按钮 (小信封) -->
+    <div id="recall-btn" onclick="toggleCard(true)">💌</div>
 
     <script src="https://cdn.staticfile.org/three.js/r128/three.min.js"></script>
     <script src="https://cdn.staticfile.org/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
@@ -239,17 +301,16 @@
         function startCeremony() {
             isStarted = true;
 
-            // 1. 隐藏按钮
+            // 1. 移除开始按钮
             const btn = document.getElementById('start-btn');
             btn.style.opacity = '0';
             btn.style.transform = 'scale(0)';
-            setTimeout(() => btn.remove(), 1000); // 彻底移除，防误触
+            setTimeout(() => btn.remove(), 1000);
 
-            // 2. 彩带 (防错)
+            // 2. 彩带
             try {
                 if(typeof confetti === 'function') {
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#ff69b4', '#fff'] });
-                    // 持续两边的礼花
                     let end = Date.now() + 2000;
                     (function frame() {
                         confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ff69b4', '#fff'] });
@@ -270,13 +331,26 @@
                 document.body.appendChild(b);
             }
 
-            // 4. 显示卡片 (1.5秒后强制显示)
+            // 4. 显示卡片
             setTimeout(() => {
-                const card = document.getElementById('message-card');
-                // 添加 !important 的类
-                card.classList.add('show-card');
-                console.log("卡片已显示"); // 用于调试
+                toggleCard(true);
             }, 1500);
+        }
+
+        // --- 切换卡片显示/隐藏 ---
+        function toggleCard(show) {
+            const card = document.getElementById('message-card');
+            const recallBtn = document.getElementById('recall-btn');
+
+            if (show) {
+                // 显示卡片，隐藏小信封
+                card.classList.add('show-card');
+                recallBtn.classList.remove('show-recall');
+            } else {
+                // 隐藏卡片，显示小信封
+                card.classList.remove('show-card');
+                recallBtn.classList.add('show-recall');
+            }
         }
     </script>
 </body>
