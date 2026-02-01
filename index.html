@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宝贝，下班快乐！</title>
+    <style>
+        /* --- 基础布局 --- */
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Microsoft YaHei', sans-serif;
+            user-select: none;
+        }
+
+        /* --- 3D 画布 (背景层) --- */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1; /* 保证在最底层 */
+        }
+
+        /* --- 按钮层 --- */
+        #btn-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        #start-btn {
+            pointer-events: auto; /* 允许点击 */
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 20px 60px;
+            font-size: 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.5s;
+            box-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
+            letter-spacing: 2px;
+        }
+
+        #start-btn:hover {
+            background: rgba(255, 105, 180, 0.3);
+            transform: scale(1.1);
+            box-shadow: 0 0 40px rgba(255, 105, 180, 0.8);
+        }
+
+        /* --- 关键修复：卡片样式 --- */
+        #message-card {
+            position: fixed; /* 强制固定在屏幕中间 */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8); /* 初始稍微缩小 */
+
+            z-index: 999; /* 🌟 关键：层级最高，防止被遮挡 🌟 */
+
+            background: rgba(20, 20, 20, 0.75);
+            backdrop-filter: blur(15px);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 105, 180, 0.5);
+            box-shadow: 0 0 60px rgba(255, 105, 180, 0.3);
+            color: white;
+            min-width: 300px;
+
+            /* 初始状态：完全透明且不可点击 */
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* 显示状态 */
+        .show-card {
+            opacity: 1 !important;
+            transform: translate(-50%, -50%) scale(1) !important;
+            pointer-events: auto !important;
+        }
+
+        h1 { margin: 0 0 15px 0; font-size: 2rem; color: #ff69b4; text-shadow: 0 0 10px #ff69b4; }
+        p { font-size: 1.2rem; line-height: 1.8; color: #eee; margin-bottom: 10px;}
+        .small-text { font-size: 0.95rem; color: #bbb; margin-top: 25px; font-style: italic;}
+
+        /* --- 气球 --- */
+        .balloon {
+            position: fixed;
+            bottom: -100px;
+            font-size: 3rem;
+            animation: floatUp 5s ease-in forwards;
+            z-index: 100; /* 比背景高，但比卡片低 */
+            opacity: 0.9;
+        }
+        @keyframes floatUp {
+            to { transform: translateY(-120vh) rotate(20deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- 按钮层 -->
+    <div id="btn-container">
+        <button id="start-btn" onclick="startCeremony()">点击正式下班</button>
+    </div>
+
+    <!-- 卡片层 (独立出来，避免被Flex布局影响) -->
+    <div id="message-card">
+        <h1>🎉 宝贝辛苦啦！</h1>
+        <p>
+            恭喜解锁职场新地图！<br>
+            第一天表现一定很棒吧。<br>
+            无论多忙，我都在你身后。
+        </p>
+        <p class="small-text">
+            晚上想吃什么，老公买单！❤️
+        </p>
+    </div>
+
+    <script src="https://cdn.staticfile.org/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.staticfile.org/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+
+    <script>
+        // --- 3D 场景初始化 ---
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000000, 0.001);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.z = 100;
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // --- 1. 星空 ---
+        const starGeo = new THREE.BufferGeometry();
+        const starCount = 4000;
+        const starPos = [];
+        for(let i=0; i<starCount; i++) {
+            starPos.push((Math.random()-0.5)*2000, (Math.random()-0.5)*2000, (Math.random()-0.5)*2000);
+        }
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+        const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, transparent: true, opacity: 0.8 });
+        const starField = new THREE.Points(starGeo, starMat);
+        scene.add(starField);
+
+        // --- 2. 爱心 ---
+        const heartGeo = new THREE.BufferGeometry();
+        const heartCount = 3000;
+        const heartPos = [];
+        const heartTargetPos = [];
+
+        function getHeartPoint(t) {
+            const x = 16 * Math.pow(Math.sin(t), 3);
+            const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+            return { x: x * 3.5, y: y * 3.5 };
+        }
+
+        for(let i=0; i<heartCount; i++) {
+            heartPos.push((Math.random()-0.5)*1000, (Math.random()-0.5)*1000, 500);
+            let t = Math.PI * 2 * Math.random();
+            let p = getHeartPoint(t);
+            heartTargetPos.push(p.x, p.y, (Math.random()-0.5)*20);
+        }
+
+        heartGeo.setAttribute('position', new THREE.Float32BufferAttribute(heartPos, 3));
+        const heartMat = new THREE.PointsMaterial({
+            color: 0xff69b4,
+            size: 2.0,
+            transparent: true,
+            opacity: 0,
+            blending: THREE.AdditiveBlending
+        });
+        const heartParticles = new THREE.Points(heartGeo, heartMat);
+        scene.add(heartParticles);
+
+        // --- 动画循环 ---
+        let isStarted = false;
+        let time = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.05;
+
+            // 星空移动
+            const positions = starField.geometry.attributes.position.array;
+            for(let i=2; i<starCount*3; i+=3) {
+                positions[i] += 5;
+                if(positions[i] > 200) positions[i] = -1800;
+            }
+            starField.geometry.attributes.position.needsUpdate = true;
+            starField.rotation.z += 0.001;
+
+            // 爱心逻辑
+            if (isStarted) {
+                if (heartMat.opacity < 1) heartMat.opacity += 0.01;
+                const hPos = heartParticles.geometry.attributes.position.array;
+                const beat = 1 + Math.sin(time * 2.5) * 0.05;
+
+                for(let i=0; i<heartCount; i++) {
+                    const ix = i * 3;
+                    const iy = i * 3 + 1;
+                    const iz = i * 3 + 2;
+                    let tx = heartTargetPos[ix] * beat;
+                    let ty = heartTargetPos[iy] * beat;
+                    let tz = heartTargetPos[iz] * beat;
+
+                    hPos[ix] += (tx - hPos[ix]) * 0.05;
+                    hPos[iy] += (ty - hPos[iy]) * 0.05;
+                    hPos[iz] += (tz - hPos[iz]) * 0.05;
+                }
+                heartParticles.geometry.attributes.position.needsUpdate = true;
+                heartParticles.rotation.y = Math.sin(time * 0.5) * 0.1;
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- 交互逻辑 ---
+        function startCeremony() {
+            isStarted = true;
+
+            // 1. 隐藏按钮
+            const btn = document.getElementById('start-btn');
+            btn.style.opacity = '0';
+            btn.style.transform = 'scale(0)';
+            setTimeout(() => btn.remove(), 1000); // 彻底移除，防误触
+
+            // 2. 彩带 (防错)
+            try {
+                if(typeof confetti === 'function') {
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#ff69b4', '#fff'] });
+                    // 持续两边的礼花
+                    let end = Date.now() + 2000;
+                    (function frame() {
+                        confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ff69b4', '#fff'] });
+                        confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#ff69b4', '#fff'] });
+                        if (Date.now() < end) requestAnimationFrame(frame);
+                    }());
+                }
+            } catch(e){}
+
+            // 3. 气球
+            const emojis = ['🎈', '💖', '🎉', '🌸', '✨'];
+            for (let i = 0; i < 25; i++) {
+                const b = document.createElement('div');
+                b.className = 'balloon';
+                b.innerText = emojis[Math.floor(Math.random()*emojis.length)];
+                b.style.left = (Math.random()*90 + 5) + 'vw';
+                b.style.animationDuration = (Math.random()*3 + 3) + 's';
+                document.body.appendChild(b);
+            }
+
+            // 4. 显示卡片 (1.5秒后强制显示)
+            setTimeout(() => {
+                const card = document.getElementById('message-card');
+                // 添加 !important 的类
+                card.classList.add('show-card');
+                console.log("卡片已显示"); // 用于调试
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
