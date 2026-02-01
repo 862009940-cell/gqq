@@ -14,14 +14,14 @@
             user-select: none;
         }
 
-        /* --- 3D 画布 --- */
+        /* --- 3D 画布 (背景层) --- */
         #canvas-container {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1;
+            z-index: 1; /* 保证在最底层 */
         }
 
         /* --- 按钮层 --- */
@@ -39,7 +39,7 @@
         }
 
         #start-btn {
-            pointer-events: auto;
+            pointer-events: auto; /* 允许点击 */
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(5px);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -59,7 +59,8 @@
             box-shadow: 0 0 40px rgba(255, 105, 180, 0.8);
         }
 
-        /* --- 卡片样式 --- */
+        /* --- 关键修复：卡片样式 --- */
+                /* --- 🌟 替换开始：卡片与交互组件样式 🌟 --- */
         #message-card {
             position: fixed;
             top: 50%;
@@ -67,7 +68,7 @@
             transform: translate(-50%, -50%) scale(0.9);
             z-index: 999; /* 最高层级 */
 
-            background: rgba(20, 20, 20, 0.85); /* 稍微深一点，增加对比度 */
+            background: rgba(20, 20, 20, 0.85);
             backdrop-filter: blur(20px);
             padding: 40px;
             border-radius: 20px;
@@ -90,7 +91,7 @@
             pointer-events: auto !important;
         }
 
-        /* 关闭按钮 (右上角 X) */
+        /* 右上角关闭 X */
         .close-icon {
             position: absolute;
             top: 15px;
@@ -120,7 +121,7 @@
             color: #fff;
         }
 
-        /* 召回按钮 (左下角小信封) */
+        /* 左下角召回小信封 */
         #recall-btn {
             position: fixed;
             bottom: 30px;
@@ -134,7 +135,6 @@
             filter: drop-shadow(0 0 10px rgba(255,105,180,0.5));
             animation: floatBtn 3s ease-in-out infinite;
         }
-        /* 召回按钮显示状态 */
         .show-recall {
             opacity: 1 !important;
             pointer-events: auto !important;
@@ -143,10 +143,18 @@
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
         }
+        /* --- 🌟 替换结束 🌟 --- */
+
+        /* 显示状态 */
+        .show-card {
+            opacity: 1 !important;
+            transform: translate(-50%, -50%) scale(1) !important;
+            pointer-events: auto !important;
+        }
 
         h1 { margin: 0 0 15px 0; font-size: 2rem; color: #ff69b4; text-shadow: 0 0 10px #ff69b4; }
         p { font-size: 1.2rem; line-height: 1.8; color: #eee; margin-bottom: 10px;}
-        .small-text { font-size: 0.95rem; color: #bbb; margin-top: 20px; font-style: italic;}
+        .small-text { font-size: 0.95rem; color: #bbb; margin-top: 25px; font-style: italic;}
 
         /* --- 气球 --- */
         .balloon {
@@ -154,7 +162,7 @@
             bottom: -100px;
             font-size: 3rem;
             animation: floatUp 5s ease-in forwards;
-            z-index: 100;
+            z-index: 100; /* 比背景高，但比卡片低 */
             opacity: 0.9;
         }
         @keyframes floatUp {
@@ -171,7 +179,8 @@
         <button id="start-btn" onclick="startCeremony()">点击正式下班</button>
     </div>
 
-    <!-- 卡片层 -->
+    <!-- 卡片层 (独立出来，避免被Flex布局影响) -->
+       <!-- 🌟 替换开始：卡片结构 🌟 -->
     <div id="message-card">
         <!-- 右上角关闭 -->
         <div class="close-icon" onclick="toggleCard(false)">×</div>
@@ -183,15 +192,16 @@
             无论多忙，我都在你身后。
         </p>
         <p class="small-text">
-            想吃什么，老公来买单！❤️
+            晚上想吃什么，老公来买单！！！❤️
         </p>
 
         <!-- 底部收起按钮 -->
-        <button class="hide-btn" onclick="toggleCard(false)">收起卡片，欣赏爱心</button>
+        <button class="hide-btn" onclick="toggleCard(false)">收起卡片</button>
     </div>
 
     <!-- 召回按钮 (小信封) -->
     <div id="recall-btn" onclick="toggleCard(true)">💌</div>
+    <!-- 🌟 替换结束 🌟 -->
 
     <script src="https://cdn.staticfile.org/three.js/r128/three.min.js"></script>
     <script src="https://cdn.staticfile.org/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
@@ -301,16 +311,17 @@
         function startCeremony() {
             isStarted = true;
 
-            // 1. 移除开始按钮
+            // 1. 隐藏按钮
             const btn = document.getElementById('start-btn');
             btn.style.opacity = '0';
             btn.style.transform = 'scale(0)';
-            setTimeout(() => btn.remove(), 1000);
+            setTimeout(() => btn.remove(), 1000); // 彻底移除，防误触
 
-            // 2. 彩带
+            // 2. 彩带 (防错)
             try {
                 if(typeof confetti === 'function') {
                     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#ff69b4', '#fff'] });
+                    // 持续两边的礼花
                     let end = Date.now() + 2000;
                     (function frame() {
                         confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ff69b4', '#fff'] });
@@ -331,13 +342,12 @@
                 document.body.appendChild(b);
             }
 
-            // 4. 显示卡片
+            // 4. 显示卡片 (原来是直接 add class，现在改成调用函数)
             setTimeout(() => {
-                toggleCard(true);
+                toggleCard(true); // 🌟 改成这句
             }, 1500);
         }
-
-        // --- 切换卡片显示/隐藏 ---
+            // --- 🌟 新增：切换卡片显示/隐藏 🌟 ---
         function toggleCard(show) {
             const card = document.getElementById('message-card');
             const recallBtn = document.getElementById('recall-btn');
